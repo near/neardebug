@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Debugger for NEAR Protocol Contracts</title>
+    <meta name="description" content="A web-based tool for debugging contracts written for NEAR Protocol">
+    <script async type="module" src="./loader.js"></script>
+</head>
+<body>
+    <h2><center>
+    A basic debugger for NEAR Contracts (prototype ver.)
+    </center></h2>
+    <form id="contract_form">
+
+    <label for="contract">Contract WASM: <input type="file" id="contract" /></label>
+    <label for="methods">Method <select id="methods"></select></label>
+
+    <div>
+    <input type="submit" id="execute" value="Execute!" />
+    </div>
+
+    <h3>Context</h3>
+
+    <label for="attached_deposit"> Attached Deposit (u128): <input type="text" id="attached_deposit" placeholder="0" /></label>
+    <label for="input"> Input (bytes): <textarea id="input" placeholder="">{}</textarea></label>
+
+    <h3>State</h3>
+
+    <button id="storage_button" action="none">Log Storage to Console (window.contractStorage)</button>
+
+    </form>
+
+</body>
+</html>
