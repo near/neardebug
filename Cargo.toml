@@ -13,8 +13,8 @@ bn = { package = "zeropool-bn", version = "0.5.11", default-features = false }
 ed25519-dalek = { version = "2.1.0", default-features = false }
 finite-wasm = { version = "0.5.0", features = ["instrument"] }
 near-crypto = "0.28.0"
-near-parameters = { path = "../nearcore/core/parameters" }
-near-primitives-core = { path = "../nearcore/core/primitives-core" }
+near-parameters = { git = "https://github.com/near/nearcore" }
+near-primitives-core = { git = "https://github.com/near/nearcore" }
 ripemd = "0.1.1"
 serde = { version = "1.0.217", features = ["derive"] }
 sha2 = "0.10"
