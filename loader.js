@@ -1,4 +1,4 @@
-import init, { b64encode, list_methods, prepare_contract, Logic, Context, init_panic_hook } from "./pkg/neardebug.js";
+import init, { b64encode, list_methods, prepare_contract, Logic, Context, Store, init_panic_hook } from "./pkg/neardebug.js";
 
 (function(window, document) {
     async function run(method_name) {
@@ -6,7 +6,7 @@ import init, { b64encode, list_methods, prepare_contract, Logic, Context, init_p
         const memory = new WebAssembly.Memory({ initial: 1024, maximum: 2048 });
         contract.memory = memory;
         const context = new Context().input_str(document.querySelector("#input").value);
-        const logic = new Logic(context, memory);
+        const logic = new Logic(context, memory, contract.store);
         contract.logic = logic;
 
         const import_object = { env: {} };
@@ -100,7 +100,7 @@ import init, { b64encode, list_methods, prepare_contract, Logic, Context, init_p
             bls12381_pairing_check: (value_len, value_ptr) /* ->  [u64] */ => { console.log("TODO bls12381_pairing_check"); },
             bls12381_p1_decompress: (value_len, value_ptr, register_id) /* ->  [u64] */ => { console.log("TODO bls(12381_p1_decompress"); },
             bls12381_p2_decompress: (value_len, value_ptr, register_id) /* ->  [u64] */ => { console.log("TODO bls12381_p2_decompress"); },
-            sandbox_debug_log: (len, ptr) /* ->  [] */ => { console.log("TODO samdbox_debug_log"); },
+            sandbox_debug_log: (len, ptr) /* ->  [] */ => { console.log("TODO sandbox_debug_log"); },
             sleep_nanos: (duration) /* ->  [] */ => { console.log("TODO sleep_nanos"); },
         };
         window.contract.instance = await WebAssembly.instantiate(window.contract.module, import_object);
@@ -109,6 +109,8 @@ import init, { b64encode, list_methods, prepare_contract, Logic, Context, init_p
 
     async function load(contract_data) {
         delete contract.instance;
+        delete contract.memory;
+        delete contract.logic;
         if (contract_data === undefined) {
             delete contract.module;
             return;
@@ -142,9 +144,9 @@ import init, { b64encode, list_methods, prepare_contract, Logic, Context, init_p
     async function on_load() {
         await init();
         init_panic_hook();
-        window.contract = {};
-        window.contract.registers = [];
-        window.contract.storage = {};
+        window.contract = {
+            store: new Store(),
+        };
         const form = document.querySelector('#contract_form');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();

@@ -3,17 +3,253 @@ pub mod logic;
 pub mod profile;
 
 use std::str::FromStr as _;
+use std::sync::MutexGuard;
 
 use js_sys::ArrayBuffer;
+use logic::mocks::mock_external::MockedValuePtr;
 pub use logic::with_ext_cost_counter;
-use logic::{gas_counter, ExecutionResultState, External, GasCounter, MemSlice, VMContext};
+use logic::{
+    gas_counter, ExecutionResultState, External, GasCounter, MemSlice, VMContext, VMLogicError,
+    ValuePtr,
+};
 use logic::{mocks::mock_external, types::PromiseIndex};
 use near_parameters::vm::Config;
 pub use near_primitives_core::code::ContractCode;
-use near_primitives_core::types::{AccountId, EpochHeight, Gas, StorageUsage};
+use near_primitives_core::types::{AccountId, Balance, EpochHeight, Gas, StorageUsage};
 pub use profile::ProfileDataV3;
 use serde::Serialize as _;
+use std::result::Result as SResult;
 use wasm_bindgen::prelude::*;
+
+fn js_serializer() -> serde_wasm_bindgen::Serializer {
+    serde_wasm_bindgen::Serializer::new()
+        .serialize_missing_as_null(true)
+        .serialize_large_number_types_as_bigints(true)
+        .serialize_bytes_as_arrays(false)
+}
+
+#[wasm_bindgen]
+#[derive(Clone)]
+pub struct Store(std::sync::Arc<std::sync::Mutex<std::collections::HashMap<Vec<u8>, Vec<u8>>>>);
+
+#[wasm_bindgen]
+impl Store {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Default::default())
+    }
+
+    fn guard(&self) -> MutexGuard<std::collections::HashMap<Vec<u8>, Vec<u8>>> {
+        self.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    pub fn to_value(&self) -> Result<JsValue> {
+        self.guard().serialize(&js_serializer()).map_err(Into::into)
+    }
+
+    pub fn set(&self, key: &[u8], value: &[u8]) {
+        self.guard().insert(key.to_vec(), value.to_vec());
+    }
+
+    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        self.guard().get(key).cloned()
+    }
+
+    pub fn remove(&self, key: &[u8]) {
+        self.guard().remove(key);
+    }
+
+    pub fn remove_subtree(&self, prefix: &[u8]) {
+        self.guard().retain(|key, _| !key.starts_with(prefix));
+    }
+
+    pub fn has_key(&self, key: &[u8]) -> bool {
+        self.guard().contains_key(key)
+    }
+}
+
+#[wasm_bindgen]
+pub struct DebugExternal {
+    store: Store,
+}
+
+#[wasm_bindgen]
+impl DebugExternal {
+    #[wasm_bindgen(constructor)]
+    pub fn new(store: &Store) -> Self {
+        Self {
+            store: store.clone(),
+        }
+    }
+}
+
+impl External for DebugExternal {
+    fn storage_set(&mut self, key: &[u8], value: &[u8]) -> SResult<(), VMLogicError> {
+        self.store.set(key, value);
+        Ok(())
+    }
+
+    fn storage_get<'a>(
+        &'a self,
+        key: &[u8],
+        _: near_parameters::vm::StorageGetMode,
+    ) -> SResult<Option<Box<dyn logic::ValuePtr + 'a>>, VMLogicError> {
+        let v = self.store.get(key);
+        Ok(v.map(|v| Box::new(MockedValuePtr::new(&v)) as Box<_>))
+    }
+
+    fn storage_remove(&mut self, key: &[u8]) -> SResult<(), VMLogicError> {
+        self.store.remove(key);
+        Ok(())
+    }
+
+    fn storage_remove_subtree(&mut self, prefix: &[u8]) -> SResult<(), VMLogicError> {
+        self.store.remove_subtree(prefix);
+        Ok(())
+    }
+
+    fn storage_has_key(
+        &mut self,
+        key: &[u8],
+        _: near_parameters::vm::StorageGetMode,
+    ) -> SResult<bool, VMLogicError> {
+        Ok(self.store.has_key(key))
+    }
+
+    fn generate_data_id(&mut self) -> near_primitives_core::hash::CryptoHash {
+        todo!()
+    }
+
+    fn get_trie_nodes_count(&self) -> logic::TrieNodesCount {
+        logic::TrieNodesCount { db_reads: 0, mem_reads: 0 }
+    }
+
+    fn get_recorded_storage_size(&self) -> usize {
+        0
+    }
+
+    fn validator_stake(&self, account_id: &AccountId) -> SResult<Option<Balance>, VMLogicError> {
+        todo!()
+    }
+
+    fn validator_total_stake(&self) -> SResult<Balance, VMLogicError> {
+        todo!()
+    }
+
+    fn create_action_receipt(
+        &mut self,
+        receipt_indices: Vec<logic::types::ReceiptIndex>,
+        receiver_id: AccountId,
+    ) -> SResult<logic::types::ReceiptIndex, logic::VMLogicError> {
+        todo!()
+    }
+
+    fn create_promise_yield_receipt(
+        &mut self,
+        receiver_id: AccountId,
+    ) -> SResult<
+        (
+            logic::types::ReceiptIndex,
+            near_primitives_core::hash::CryptoHash,
+        ),
+        logic::VMLogicError,
+    > {
+        todo!()
+    }
+
+    fn submit_promise_resume_data(
+        &mut self,
+        data_id: near_primitives_core::hash::CryptoHash,
+        data: Vec<u8>,
+    ) -> SResult<bool, logic::VMLogicError> {
+        todo!()
+    }
+
+    fn append_action_create_account(
+        &mut self,
+        receipt_index: logic::types::ReceiptIndex,
+    ) -> SResult<(), logic::VMLogicError> {
+        todo!()
+    }
+
+    fn append_action_deploy_contract(
+        &mut self,
+        receipt_index: logic::types::ReceiptIndex,
+        code: Vec<u8>,
+    ) -> SResult<(), logic::VMLogicError> {
+        todo!()
+    }
+
+    fn append_action_function_call_weight(
+        &mut self,
+        receipt_index: logic::types::ReceiptIndex,
+        method_name: Vec<u8>,
+        args: Vec<u8>,
+        attached_deposit: Balance,
+        prepaid_gas: Gas,
+        gas_weight: near_primitives_core::types::GasWeight,
+    ) -> SResult<(), logic::VMLogicError> {
+        todo!()
+    }
+
+    fn append_action_transfer(
+        &mut self,
+        receipt_index: logic::types::ReceiptIndex,
+        deposit: Balance,
+    ) -> SResult<(), logic::VMLogicError> {
+        todo!()
+    }
+
+    fn append_action_stake(
+        &mut self,
+        receipt_index: logic::types::ReceiptIndex,
+        stake: Balance,
+        public_key: near_crypto::PublicKey,
+    ) {
+        todo!()
+    }
+
+    fn append_action_add_key_with_full_access(
+        &mut self,
+        receipt_index: logic::types::ReceiptIndex,
+        public_key: near_crypto::PublicKey,
+        nonce: near_primitives_core::types::Nonce,
+    ) {
+        todo!()
+    }
+
+    fn append_action_add_key_with_function_call(
+        &mut self,
+        receipt_index: logic::types::ReceiptIndex,
+        public_key: near_crypto::PublicKey,
+        nonce: near_primitives_core::types::Nonce,
+        allowance: Option<Balance>,
+        receiver_id: AccountId,
+        method_names: Vec<Vec<u8>>,
+    ) -> SResult<(), logic::VMLogicError> {
+        todo!()
+    }
+
+    fn append_action_delete_key(
+        &mut self,
+        receipt_index: logic::types::ReceiptIndex,
+        public_key: near_crypto::PublicKey,
+    ) {
+        todo!()
+    }
+
+    fn append_action_delete_account(
+        &mut self,
+        receipt_index: logic::types::ReceiptIndex,
+        beneficiary_id: AccountId,
+    ) -> SResult<(), logic::VMLogicError> {
+        todo!()
+    }
+
+    fn get_receipt_receiver(&self, receipt_index: logic::types::ReceiptIndex) -> &AccountId {
+        todo!()
+    }
+}
 
 #[wasm_bindgen]
 pub struct Context(VMContext);
@@ -60,7 +296,7 @@ type Result<T> = std::result::Result<T, JsError>;
 #[wasm_bindgen]
 impl Logic {
     #[wasm_bindgen(constructor)]
-    pub fn new(context: Context, memory: js_sys::WebAssembly::Memory) -> Self {
+    pub fn new(context: Context, memory: js_sys::WebAssembly::Memory, store: &Store) -> Self {
         let max_gas_burnt = u64::max_value();
         let prepaid_gas = u64::max_value();
         let is_view = false;
@@ -75,10 +311,10 @@ impl Logic {
         );
         let result_state =
             ExecutionResultState::new(&context.0, gas_counter, config.wasm_config.clone());
-        let mock_ext = Box::new(mock_external::MockedExternal::new());
+        let ext = Box::new(DebugExternal::new(store));
         Self {
             logic: logic::VMLogic::new(
-                mock_ext,
+                ext,
                 context.0,
                 config.fees.clone(),
                 result_state,
@@ -87,17 +323,10 @@ impl Logic {
         }
     }
 
-    fn js_serializer(&self) -> serde_wasm_bindgen::Serializer {
-        serde_wasm_bindgen::Serializer::new()
-            .serialize_missing_as_null(true)
-            .serialize_large_number_types_as_bigints(true)
-            .serialize_bytes_as_arrays(false)
-    }
-
     pub fn context(&self) -> Result<JsValue> {
         self.logic
             .context
-            .serialize(&self.js_serializer())
+            .serialize(&js_serializer())
             .map_err(Into::into)
     }
 
@@ -106,12 +335,12 @@ impl Logic {
             .result_state
             .clone()
             .compute_outcome()
-            .serialize(&self.js_serializer())
+            .serialize(&js_serializer())
             .map_err(Into::into)
     }
 
     pub fn registers(&mut self) -> Result<JsValue> {
-        let s = self.js_serializer();
+        let s = js_serializer();
         self.logic.registers().serialize(&s).map_err(Into::into)
     }
 
