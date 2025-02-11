@@ -1,0 +1,39 @@
+<div align="center">
+    <h1><code>neardebug</code></h1>
+    <strong>A debugger for NEAR Protocol Contracts</strong>
+</div>
+
+This project provides the necessary glue to invoke a NEAR contract inside a Web Browser's WASM
+runtime. Among other things that allows seamless use of the Web Developer Tools for use in
+debugging the execution of WASM code.
+
+While this codebase does share a lot of code with the reference implementation of the NEAR
+protocol, there may inevitably be certain differences in order to enable easier debugging
+experience (e.g. the `log_utf8` host function call will print to the console via `console.log`.)
+For most intents and purposes the behaviour should be close enough however.
+
+Currently the project is in very early development stages, but it does work with some patience and
+care.
+
+# Using `neardebug`
+
+`neardebug` is deployed to GitHub Pages and is accessible at [https://near.github.io/neardebug/](#TODO).
+
+It is recommended to use Chromium for debugging: it has support for DWARF debug info which will
+show you the source code for your contract in the debugger, provided you have compiled your
+contract with debug info enabled. At the same time Firefox works better in some other ways. If
+using Chromium be interested in the [C/C++ devtools support (DWARF)][dwext] extension.
+
+[dwext]:https://chromewebstore.google.com/detail/cc++-devtools-support-dwa/pdcpmagijalfljmkmjngeonclgbbannb?pli=1
+
+First open the Web Browser's Web Developer Tools (try `Ctrl+Shift+I` or `Cmd+Shift+I`,) then select
+your contract, the method to invoke and press `Execute!`. Depending on your contract code you may
+need to modify the execution context as well.
+
+The console will output log messages and any errors that occur as a result of executing the
+contract. You can also place breakpoints and/or request the browser to stop execution on any
+uncaught exceptions as well.
+
+`window.contract` is made available with some information about the contract and its execution as
+well. For instance `window.contract.logic.outcome()` will show you the outcome you would see on the
+chain when executing the contract on the real network (or testnet.)
