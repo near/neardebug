@@ -119,11 +119,13 @@ import init, { b64encode, list_methods, prepare_contract, Logic, Context, init_p
     }
 
     async function on_contract_change(element) {
+        const button = document.querySelector("#execute");
+        const method_selector = document.querySelector("#methods");
+        button.disabled = true;
+        method_selector.innerHTML = "";
         if (element.files.length > 0) {
             const buffer = await element.files[0].arrayBuffer();
             const callable_methods = list_methods(new Uint8Array(buffer));
-            const method_selector = document.querySelector("#methods");
-            method_selector.innerHTML = "";
             for (const method of callable_methods) {
                 const option = document.createElement("option");
                 option.innerText = method;
@@ -134,7 +136,7 @@ import init, { b64encode, list_methods, prepare_contract, Logic, Context, init_p
         } else {
             await load(undefined);
         }
-        window.contract
+        button.disabled = false;
     }
 
     async function on_load() {

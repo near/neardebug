@@ -5,30 +5,52 @@
     <title>Debugger for NEAR Protocol Contracts</title>
     <meta name="description" content="A web-based tool for debugging contracts written for NEAR Protocol">
     <script async type="module" src="./loader.js"></script>
+    <link rel="stylesheet" type="text/css" href="./neardebug.css">
 </head>
 <body>
-    <h2><center>
+    <header>
+    <h2>
     A basic debugger for NEAR Contracts (prototype ver.)
-    </center></h2>
+    </h2>
+
+    <p>
+    Here you can execute and debug in your browser contracts meant to run on the NEAR protocol.
+    Use the browser built-in developer tools (often available via <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>
+    <kbd>Shift</kbd><kbd>I</kbd>): log messages and errors will show up in the console and you
+    can use the debugger to step through the contract code.
+    </p>
+
+    <p>
+    The debugging experience will differ between browsers. For instance Chromium supports DWARF
+    debug info. Contracts built from Rust source will embed such debug info into the
+    <code>.wasm</code> file, for example, so long as debug info is enabled. This would then allow
+    debugging Rust code and not the underlying WebAssembly!
+    </p>
+
+    <p>
+    <code>window.contract</code> in the console will allow you to explore some specifics of the
+    contract runtime throughout the execution of the contract.
+    </p>
+    </header>
+
+
     <form id="contract_form">
 
-    <label for="contract">Contract WASM: <input type="file" id="contract" /></label>
-    <label for="methods">Method <select id="methods"></select></label>
-
-    <div>
-    <input type="submit" id="execute" value="Execute!" />
-    </div>
+    <label for="contract">Contract WASM </label>
+    <input type="file" name="contract" id="contract" />
+    <label for="methods">Method </label>
+    <select id="methods" name="method"></select>
+    <input type="submit" id="execute" value="Execute!" disabled />
 
     <h3>Context</h3>
 
-    <label for="attached_deposit"> Attached Deposit (u128): <input type="text" id="attached_deposit" placeholder="0" /></label>
-    <label for="input"> Input (bytes): <textarea id="input" placeholder="">{}</textarea></label>
+    <label for="attached_deposit"> Attached Deposit (u128)</label>
+    <input type="text" name="attached_deposit" id="attached_deposit" placeholder="0" />
+    <label for="input"> Input (bytes)</label>
+    <textarea id="input" name="input" placeholder="">{}</textarea>
 
     <h3>State</h3>
 
-    <button id="storage_button" action="none">Log Storage to Console (window.contractStorage)</button>
-
     </form>
-
 </body>
 </html>
