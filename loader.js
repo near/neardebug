@@ -1,4 +1,4 @@
-import init, { b64encode, list_methods, prepare_contract, Logic, Context, Store, init_panic_hook } from "./pkg/neardebug.js";
+import init, { list_methods, prepare_contract, Logic, Context, Store, init_panic_hook, DebugExternal } from "./pkg/neardebug.js";
 
 (function(window, document) {
     async function run(method_name) {
@@ -6,7 +6,9 @@ import init, { b64encode, list_methods, prepare_contract, Logic, Context, Store,
         const memory = new WebAssembly.Memory({ initial: 1024, maximum: 2048 });
         contract.memory = memory;
         const context = new Context().input_str(document.querySelector("#input").value);
-        const logic = new Logic(context, memory, contract.store);
+        const protocol_version = 72;
+        const ext = new DebugExternal(contract.store, context, protocol_version);
+        const logic = new Logic(context, memory, ext);
         contract.logic = logic;
 
         const import_object = { env: {} };

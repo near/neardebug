@@ -2,6 +2,7 @@ pub mod errors;
 pub mod logic;
 pub mod profile;
 
+use std::collections::BTreeMap;
 use std::str::FromStr as _;
 use std::sync::MutexGuard;
 
@@ -15,7 +16,11 @@ use logic::{
 use logic::{mocks::mock_external, types::PromiseIndex};
 use near_parameters::vm::Config;
 pub use near_primitives_core::code::ContractCode;
-use near_primitives_core::types::{AccountId, Balance, EpochHeight, Gas, StorageUsage};
+use near_primitives_core::hash::CryptoHash;
+use near_primitives_core::types::{
+    AccountId, Balance, BlockHeight, EpochHeight, Gas, ProtocolVersion, StorageUsage,
+};
+use near_primitives_core::version::ProtocolFeature;
 pub use profile::ProfileDataV3;
 use serde::Serialize as _;
 use std::result::Result as SResult;
@@ -68,18 +73,44 @@ impl Store {
     }
 }
 
+struct Receipt {
+    receiver: AccountId,
+}
+
 #[wasm_bindgen]
 pub struct DebugExternal {
     store: Store,
+    protocol_version: ProtocolVersion,
+    action_hash: CryptoHash,
+    prev_block_hash: CryptoHash,
+    last_block_hash: CryptoHash,
+    block_height: BlockHeight,
+    data_count: u64,
+    validators: BTreeMap<AccountId, Balance>,
+    receipts: Vec<Receipt>,
 }
 
 #[wasm_bindgen]
 impl DebugExternal {
     #[wasm_bindgen(constructor)]
-    pub fn new(store: &Store) -> Self {
+    pub fn new(store: &Store, context: &Context, protocol_version: ProtocolVersion) -> Self {
         Self {
             store: store.clone(),
+            action_hash: CryptoHash::default(),
+            block_height: context.0.block_height,
+            prev_block_hash: CryptoHash::default(),
+            last_block_hash: CryptoHash::default(),
+            data_count: 0,
+            validators: Default::default(),
+            protocol_version,
+            receipts: Vec::new(),
         }
+    }
+
+    fn append_action(&mut self, receipt_index: logic::types::ReceiptIndex) {
+        self.receipts
+            .get(receipt_index as usize)
+            .expect("receipt index should have been returned from runtime");
     }
 }
 
@@ -116,12 +147,47 @@ impl External for DebugExternal {
         Ok(self.store.has_key(key))
     }
 
-    fn generate_data_id(&mut self) -> near_primitives_core::hash::CryptoHash {
-        todo!()
+    fn generate_data_id(&mut self) -> CryptoHash {
+        /// FIXME: get this outta near_primitives?
+        fn create_hash_upgradable(
+            protocol_version: near_primitives_core::types::ProtocolVersion,
+            base: &CryptoHash,
+            extra_hash_old: &CryptoHash,
+            extra_hash: &CryptoHash,
+            block_height: near_primitives_core::types::BlockHeight,
+            salt: u64,
+        ) -> CryptoHash {
+            const BYTES_LEN: usize =
+                size_of::<CryptoHash>() + size_of::<CryptoHash>() + size_of::<u64>();
+            let mut bytes: Vec<u8> = Vec::with_capacity(BYTES_LEN);
+            bytes.extend_from_slice(base.as_ref());
+            if ProtocolFeature::BlockHeightForReceiptId.enabled(protocol_version) {
+                bytes.extend_from_slice(block_height.to_le_bytes().as_ref())
+            } else if protocol_version >= 42 {
+                bytes.extend_from_slice(extra_hash.as_ref())
+            } else {
+                bytes.extend_from_slice(extra_hash_old.as_ref())
+            };
+            bytes.extend(salt.to_le_bytes());
+            CryptoHash::hash_bytes(&bytes)
+        }
+        let hash = create_hash_upgradable(
+            self.protocol_version,
+            &self.action_hash,
+            &self.prev_block_hash,
+            &self.last_block_hash,
+            self.block_height,
+            self.data_count,
+        );
+        self.data_count += 1;
+        hash
     }
 
     fn get_trie_nodes_count(&self) -> logic::TrieNodesCount {
-        logic::TrieNodesCount { db_reads: 0, mem_reads: 0 }
+        logic::TrieNodesCount {
+            db_reads: 0,
+            mem_reads: 0,
+        }
     }
 
     fn get_recorded_storage_size(&self) -> usize {
@@ -129,37 +195,40 @@ impl External for DebugExternal {
     }
 
     fn validator_stake(&self, account_id: &AccountId) -> SResult<Option<Balance>, VMLogicError> {
-        todo!()
+        Ok(self.validators.get(account_id).cloned())
     }
 
     fn validator_total_stake(&self) -> SResult<Balance, VMLogicError> {
-        todo!()
+        Ok(self.validators.values().sum())
     }
 
     fn create_action_receipt(
         &mut self,
-        receipt_indices: Vec<logic::types::ReceiptIndex>,
+        _receipt_indices: Vec<logic::types::ReceiptIndex>,
         receiver_id: AccountId,
     ) -> SResult<logic::types::ReceiptIndex, logic::VMLogicError> {
-        todo!()
+        let index = self.receipts.len();
+        self.receipts.push(Receipt {
+            receiver: receiver_id,
+        });
+        Ok(index as u64)
     }
 
     fn create_promise_yield_receipt(
         &mut self,
         receiver_id: AccountId,
-    ) -> SResult<
-        (
-            logic::types::ReceiptIndex,
-            near_primitives_core::hash::CryptoHash,
-        ),
-        logic::VMLogicError,
-    > {
-        todo!()
+    ) -> SResult<(logic::types::ReceiptIndex, CryptoHash), logic::VMLogicError> {
+        let index = self.receipts.len();
+        let data_id = self.generate_data_id();
+        self.receipts.push(Receipt {
+            receiver: receiver_id,
+        });
+        Ok((index as u64, data_id))
     }
 
     fn submit_promise_resume_data(
         &mut self,
-        data_id: near_primitives_core::hash::CryptoHash,
+        data_id: CryptoHash,
         data: Vec<u8>,
     ) -> SResult<bool, logic::VMLogicError> {
         todo!()
@@ -169,85 +238,95 @@ impl External for DebugExternal {
         &mut self,
         receipt_index: logic::types::ReceiptIndex,
     ) -> SResult<(), logic::VMLogicError> {
-        todo!()
+        self.append_action(receipt_index);
+        Ok(())
     }
 
     fn append_action_deploy_contract(
         &mut self,
         receipt_index: logic::types::ReceiptIndex,
-        code: Vec<u8>,
+        _code: Vec<u8>,
     ) -> SResult<(), logic::VMLogicError> {
-        todo!()
+        self.append_action(receipt_index);
+        Ok(())
     }
 
     fn append_action_function_call_weight(
         &mut self,
         receipt_index: logic::types::ReceiptIndex,
-        method_name: Vec<u8>,
-        args: Vec<u8>,
-        attached_deposit: Balance,
-        prepaid_gas: Gas,
-        gas_weight: near_primitives_core::types::GasWeight,
+        _method_name: Vec<u8>,
+        _args: Vec<u8>,
+        _attached_deposit: Balance,
+        _prepaid_gas: Gas,
+        _gas_weight: near_primitives_core::types::GasWeight,
     ) -> SResult<(), logic::VMLogicError> {
-        todo!()
+        self.append_action(receipt_index);
+        Ok(())
     }
 
     fn append_action_transfer(
         &mut self,
         receipt_index: logic::types::ReceiptIndex,
-        deposit: Balance,
+        _deposit: Balance,
     ) -> SResult<(), logic::VMLogicError> {
-        todo!()
+        self.append_action(receipt_index);
+        Ok(())
     }
 
     fn append_action_stake(
         &mut self,
         receipt_index: logic::types::ReceiptIndex,
-        stake: Balance,
-        public_key: near_crypto::PublicKey,
+        _stake: Balance,
+        _public_key: near_crypto::PublicKey,
     ) {
-        todo!()
+        self.append_action(receipt_index);
     }
 
     fn append_action_add_key_with_full_access(
         &mut self,
         receipt_index: logic::types::ReceiptIndex,
-        public_key: near_crypto::PublicKey,
-        nonce: near_primitives_core::types::Nonce,
+        _public_key: near_crypto::PublicKey,
+        _nonce: near_primitives_core::types::Nonce,
     ) {
-        todo!()
+        self.append_action(receipt_index);
     }
 
     fn append_action_add_key_with_function_call(
         &mut self,
         receipt_index: logic::types::ReceiptIndex,
-        public_key: near_crypto::PublicKey,
-        nonce: near_primitives_core::types::Nonce,
-        allowance: Option<Balance>,
-        receiver_id: AccountId,
-        method_names: Vec<Vec<u8>>,
+        _public_key: near_crypto::PublicKey,
+        _nonce: near_primitives_core::types::Nonce,
+        _allowance: Option<Balance>,
+        _receiver_id: AccountId,
+        _method_names: Vec<Vec<u8>>,
     ) -> SResult<(), logic::VMLogicError> {
-        todo!()
+        self.append_action(receipt_index);
+        Ok(())
     }
 
     fn append_action_delete_key(
         &mut self,
         receipt_index: logic::types::ReceiptIndex,
-        public_key: near_crypto::PublicKey,
+        _public_key: near_crypto::PublicKey,
     ) {
-        todo!()
+        self.append_action(receipt_index);
     }
 
     fn append_action_delete_account(
         &mut self,
         receipt_index: logic::types::ReceiptIndex,
-        beneficiary_id: AccountId,
+        _beneficiary_id: AccountId,
     ) -> SResult<(), logic::VMLogicError> {
-        todo!()
+        self.append_action(receipt_index);
+        Ok(())
     }
 
     fn get_receipt_receiver(&self, receipt_index: logic::types::ReceiptIndex) -> &AccountId {
-        todo!()
+        &self
+            .receipts
+            .get(receipt_index as usize)
+            .expect("receipt index should have been returned by the runtime")
+            .receiver
     }
 }
 
@@ -296,7 +375,7 @@ type Result<T> = std::result::Result<T, JsError>;
 #[wasm_bindgen]
 impl Logic {
     #[wasm_bindgen(constructor)]
-    pub fn new(context: Context, memory: js_sys::WebAssembly::Memory, store: &Store) -> Self {
+    pub fn new(context: Context, memory: js_sys::WebAssembly::Memory, ext: DebugExternal) -> Self {
         let max_gas_burnt = u64::max_value();
         let prepaid_gas = u64::max_value();
         let is_view = false;
@@ -311,7 +390,7 @@ impl Logic {
         );
         let result_state =
             ExecutionResultState::new(&context.0, gas_counter, config.wasm_config.clone());
-        let ext = Box::new(DebugExternal::new(store));
+        let ext = Box::new(ext);
         Self {
             logic: logic::VMLogic::new(
                 ext,

@@ -1,7 +1,6 @@
 mod near_vm_runner;
 mod prepare;
 
-use base64::Engine as _;
 use wasm_bindgen::prelude::*;
 use finite_wasm::wasmparser::{self, Type};
 pub use near_vm_runner::{Logic, Context};
@@ -24,11 +23,6 @@ pub fn rustsecp256k1_v0_8_1_context_preallocated_destroy() {
 #[wasm_bindgen]
 pub fn init_panic_hook() {
     console_error_panic_hook::set_once();
-}
-
-#[wasm_bindgen]
-pub fn b64encode(bytes: &[u8]) -> String {
-    base64::prelude::BASE64_STANDARD.encode(bytes)
 }
 
 #[wasm_bindgen]
