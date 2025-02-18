@@ -443,17 +443,18 @@ type Result<T> = std::result::Result<T, JsError>;
 impl Logic {
     #[wasm_bindgen(constructor)]
     pub fn new(context: Context, memory: js_sys::WebAssembly::Memory, ext: DebugExternal) -> Self {
-        let max_gas_burnt = u64::max_value();
-        let prepaid_gas = u64::max_value();
-        let is_view = false;
         let config_store = near_parameters::RuntimeConfigStore::new(None);
         let config = config_store.get_config(near_primitives_core::version::PROTOCOL_VERSION);
+        let max_gas_burnt = match context.0.view_config {
+            Some(ref v) => v.max_gas_burnt,
+            None => config.wasm_config.limit_config.max_gas_burnt,
+        };
         let gas_counter = GasCounter::new(
             config.wasm_config.ext_costs.clone(),
             max_gas_burnt,
             config.wasm_config.regular_op_cost,
-            prepaid_gas,
-            is_view,
+            context.0.prepaid_gas,
+            context.0.view_config.is_some(),
         );
         let result_state =
             ExecutionResultState::new(&context.0, gas_counter, config.wasm_config.clone());
