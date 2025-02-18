@@ -1,12 +1,44 @@
 import init, { list_methods, prepare_contract, Logic, Context, Store, init_panic_hook, DebugExternal } from "./pkg/neardebug.js";
 
 (function(window, document) {
+    async function make_context() {
+        const input = document.querySelector("#input");
+        const attached_deposit = document.querySelector("#attached_deposit");
+        const balance = document.querySelector("#balance");
+        const locked_balance = document.querySelector("#locked_balance");
+        const current_account = document.querySelector("#current_account");
+        const signer_account = document.querySelector("#signer_account");
+        const signer_account_pk = document.querySelector("#signer_account_pk");
+        const predecessor_account = document.querySelector("#predecessor_account");
+        const block_height = document.querySelector("#block_height");
+        const block_timestamp = document.querySelector("#block_timestamp");
+        const epoch_height = document.querySelector("#epoch_height");
+        const random_seed = document.querySelector("#random_seed");
+        const gas = document.querySelector("#gas");
+        const context = new Context()
+            .input_str(input.value || input.placeholder)
+            .attached_deposit(attached_deposit.value || attached_deposit.placeholder)
+            .balance(balance.value || balance.placeholder)
+            .locked_balance(locked_balance.value || locked_balance.placeholder)
+            .current_account(current_account.value || current_account.placeholder)
+            .signer_account(signer_account.value || signer_account.placeholder)
+            .signer_account_pk(signer_account_pk.value || signer_account_pk.placeholder)
+            .predecessor_account(predecessor_account.value || predecessor_account.placeholder)
+            .block_height(block_height.value || block_height.placeholder)
+            .block_timestamp(block_timestamp.value || block_timestamp.placeholder)
+            .epoch_height(epoch_height.value || epoch_height.placeholder)
+            .random_seed(random_seed.value || random_seed.placeholder)
+            .gas(gas.value || gas.placeholder)
+            ;
+        return context;
+    }
+
     async function run(method_name) {
         const contract = window.contract;
         const memory = new WebAssembly.Memory({ initial: 1024, maximum: 2048 });
         contract.memory = memory;
-        const context = new Context().input_str(document.querySelector("#input").value);
         const protocol_version = 72;
+        const context = await make_context();
         const ext = new DebugExternal(contract.store, context, protocol_version);
         const logic = new Logic(context, memory, ext);
         contract.logic = logic;
@@ -162,6 +194,13 @@ import init, { list_methods, prepare_contract, Logic, Context, Store, init_panic
             on_contract_change(e.target);
         });
         on_contract_change(file_input);
+
+        const update_timestamp_placeholder = () => {
+            const nanos = BigInt(~~(Date.now() / 1000)) * 1000n * 1000n * 1000n;
+            document.querySelector("#block_timestamp").placeholder = nanos;
+        };
+        update_timestamp_placeholder();
+        setInterval(update_timestamp_placeholder, 1000);
     }
 
     (window.addEventListener || window.attachEvent)('load', on_load);

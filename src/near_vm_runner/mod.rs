@@ -338,30 +338,97 @@ impl Context {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
         let alice = AccountId::from_str("alice.near").unwrap();
+        let bob = AccountId::from_str("bob.near").unwrap();
         Self(VMContext {
             current_account_id: alice.clone(),
-            signer_account_id: alice.clone(),
-            signer_account_pk: vec![],
-            predecessor_account_id: alice,
+            signer_account_id: bob.clone(),
+            signer_account_pk: CryptoHash::default().as_bytes().to_vec(),
+            predecessor_account_id: bob,
+            attached_deposit: 0,
             input: vec![],
             promise_results: Default::default(),
             block_height: 0,
             block_timestamp: 0,
             epoch_height: 0,
-            account_balance: 100,
-            account_locked_balance: 10,
-            storage_usage: 1,
-            attached_deposit: 0,
-            prepaid_gas: 1,
-            random_seed: vec![42],
+            account_balance: 100000000000000000000000000,
+            account_locked_balance: 500000000000000000000000,
+            prepaid_gas: 300000000000000,
+            random_seed: CryptoHash::default().as_bytes().to_vec(),
             view_config: None,
             output_data_receivers: vec![],
+            storage_usage: 1,
         })
+    }
+
+    pub fn gas(mut self, gas: &str) -> Result<Self> {
+        self.0.prepaid_gas = gas.parse()?;
+        Ok(self)
     }
 
     pub fn input_str(mut self, value: &str) -> Self {
         self.0.input = Vec::from(value.as_bytes());
         self
+    }
+
+    pub fn attached_deposit(mut self, deposit: &str) -> Result<Self> {
+        self.0.attached_deposit = deposit.parse()?;
+        Ok(self)
+    }
+
+    pub fn balance(mut self, balance: &str) -> Result<Self> {
+        self.0.account_balance = balance.parse()?;
+        Ok(self)
+    }
+
+    pub fn locked_balance(mut self, balance: &str) -> Result<Self> {
+        self.0.account_locked_balance = balance.parse()?;
+        Ok(self)
+    }
+
+    pub fn current_account(mut self, account: &str) -> Result<Self> {
+        self.0.current_account_id = account.parse()?;
+        Ok(self)
+    }
+
+    pub fn signer_account(mut self, account: &str) -> Result<Self> {
+        self.0.signer_account_id = account.parse()?;
+        Ok(self)
+    }
+
+    pub fn signer_account_pk(mut self, key: &str) -> Result<Self> {
+        self.0.signer_account_pk = CryptoHash::from_str(key)
+            .map_err(|e| JsError::new(&e.to_string()))?
+            .as_bytes()
+            .to_vec();
+        Ok(self)
+    }
+
+    pub fn predecessor_account(mut self, account: &str) -> Result<Self> {
+        self.0.predecessor_account_id = account.parse()?;
+        Ok(self)
+    }
+
+    pub fn block_height(mut self, height: &str) -> Result<Self> {
+        self.0.block_height = height.parse()?;
+        Ok(self)
+    }
+
+    pub fn block_timestamp(mut self, timestamp: &str) -> Result<Self> {
+        self.0.block_timestamp = timestamp.parse()?;
+        Ok(self)
+    }
+
+    pub fn epoch_height(mut self, height: &str) -> Result<Self> {
+        self.0.epoch_height = height.parse()?;
+        Ok(self)
+    }
+
+    pub fn random_seed(mut self, key: &str) -> Result<Self> {
+        self.0.random_seed = CryptoHash::from_str(key)
+            .map_err(|e| JsError::new(&e.to_string()))?
+            .as_bytes()
+            .to_vec();
+        Ok(self)
     }
 }
 

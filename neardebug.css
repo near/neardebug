@@ -46,6 +46,9 @@ kbd {
     text-align: center;
 }
 
+input, textarea, select {
+    font-family: monospace;
+}
 
 /* Colors */
 html {

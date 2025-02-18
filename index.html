@@ -44,10 +44,32 @@
 
     <h3>Context</h3>
 
-    <label for="attached_deposit"> Attached Deposit (u128)</label>
+    <label for="input">Input (args)</label>
+    <textarea id="input" name="input" placeholder="{}"></textarea>
+    <label for="gas">Gas</label>
+    <input type="text" name="gas" id="gas" placeholder="300000000000000" />
+    <label for="current_account">Contract Account</label>
+    <input type="text" name="current_account" id="current_account" placeholder="alice.near" />
+    <label for="predecessor_account">Predecessor Account</label>
+    <input type="text" name="predecessor_account" id="predecessor_account" placeholder="bob.near" />
+    <label for="signer_account">Signer Account</label>
+    <input type="text" name="signer_account" id="signer_account" placeholder="bob.near" />
+    <label for="signer_account_pk">Transaction Sign PK</label>
+    <input type="text" name="signer_account_pk" id="signer_account_pk" placeholder="11111111111111111111111111111111" />
+    <label for="attached_deposit">Attached Deposit (yoctoⓃ)</label>
     <input type="text" name="attached_deposit" id="attached_deposit" placeholder="0" />
-    <label for="input"> Input (bytes)</label>
-    <textarea id="input" name="input" placeholder="">{}</textarea>
+    <label for="balance">Balance (yoctoⓃ)</label>
+    <input type="text" name="balance" id="balance" placeholder="100000000000000000000000000" />
+    <label for="locked_balance">Locked Balance (yoctoⓃ)</label>
+    <input type="text" name="locked_balance" id="locked_balance" placeholder="500000000000000000000000" />
+    <label for="block_height">Block height</label>
+    <input type="text" name="block_height" id="block_height" placeholder="0" />
+    <label for="block_timestamp">Block timestamp</label>
+    <input type="text" name="block_timestamp" id="block_timestamp" placeholder="0" />
+    <label for="epoch_height">Epoch height</label>
+    <input type="text" name="epoch_height" id="epoch_height" placeholder="0" />
+    <label for="random_seed">Random Seed</label>
+    <input type="text" name="random_seed" id="random_seed" placeholder="5TeWSsjg2gbxCyWVniXeCmwM7UtHTCK7svzJr5xYJzHf" />
 
     <h3>State</h3>
 
