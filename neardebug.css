@@ -73,22 +73,6 @@ input, textarea, select {
 }
 
 /* Colors */
-html {
-    background: #fff;
-    color: #333;
-}
-
-kbd, header {
-    border-color: #aaa;
-}
-
-@media (prefers-color-scheme: dark) {
-    html {
-        background: #000;
-        color: #ddd;
-    }
-    kbd, header {
-        border-color: #666;
-    }
-
+:root {
+  color-scheme: light dark;
 }
