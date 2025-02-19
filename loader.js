@@ -218,6 +218,41 @@ import init, { list_methods, prepare_contract, Logic, Context, Store, init_panic
         }
     }
 
+    async function update_ui() {
+        document.querySelector("#store_size").value = window.contract.store.size();
+    }
+
+    async function act_execute() {
+        const methods = document.querySelector("#methods");
+        const method = methods.selectedOptions[0].value;
+        try {
+            await run(method);
+        } finally {
+            update_ui();
+        }
+    }
+
+    async function act_download_store() {
+        var blob = new Blob([window.contract.store.to_json()], {type: "application/json"});
+        var link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = `neardebug_${new Date().valueOf()}.nearstore`;
+        link.click();
+    }
+
+    async function act_load_store() {
+        var select = document.createElement("input");
+        select.type = "file";
+        select.accept = ".nearstore";
+        select.onchange = async (e) => {
+            const file = e.target.files[0];
+            const buffer = new Uint8Array(await file.arrayBuffer());
+            window.contract.store = Store.from_json(buffer);
+            update_ui();
+        };
+        select.click();
+    }
+
     async function on_load() {
         await init();
         init_panic_hook();
@@ -227,9 +262,13 @@ import init, { list_methods, prepare_contract, Logic, Context, Store, init_panic
         const form = document.querySelector('#contract_form');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const methods = document.querySelector("#methods");
-            const method = methods.selectedOptions[0].value;
-            run(method);
+            if (e.submitter.id == "execute") {
+                await act_execute();
+            } else if (e.submitter.id == "download_store") {
+                await act_download_store();
+            } else if (e.submitter.id == "load_store") {
+                await act_load_store();
+            }
         });
 
         const file_input = document.querySelector('#contract');

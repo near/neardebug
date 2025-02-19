@@ -4,9 +4,9 @@ pub mod profile;
 
 use std::collections::BTreeMap;
 use std::str::FromStr as _;
-use std::sync::MutexGuard;
+use std::sync::{Arc, Mutex, MutexGuard};
 
-use js_sys::ArrayBuffer;
+use js_sys::{ArrayBuffer, Uint8Array};
 use logic::mocks::mock_external::MockedValuePtr;
 pub use logic::with_ext_cost_counter;
 use logic::{
@@ -23,6 +23,7 @@ use near_primitives_core::types::{
 use near_primitives_core::version::ProtocolFeature;
 pub use profile::ProfileDataV3;
 use serde::Serialize as _;
+use serde_with::serde_as;
 use std::result::Result as SResult;
 use wasm_bindgen::prelude::*;
 
@@ -33,9 +34,18 @@ fn js_serializer() -> serde_wasm_bindgen::Serializer {
         .serialize_bytes_as_arrays(false)
 }
 
+
+#[serde_as]
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+#[serde(transparent)]
+struct StoreMap {
+    #[serde_as(as = "BTreeMap<serde_with::base64::Base64, serde_with::base64::Base64>")]
+    map: BTreeMap<Vec<u8>, Vec<u8>>,
+}
+
 #[wasm_bindgen]
 #[derive(Clone)]
-pub struct Store(std::sync::Arc<std::sync::Mutex<std::collections::HashMap<Vec<u8>, Vec<u8>>>>);
+pub struct Store(Arc<Mutex<StoreMap>>);
 
 #[wasm_bindgen]
 impl Store {
@@ -44,8 +54,29 @@ impl Store {
         Self(Default::default())
     }
 
-    fn guard(&self) -> MutexGuard<std::collections::HashMap<Vec<u8>, Vec<u8>>> {
+    pub fn from_json(array: Uint8Array) -> Result<Self> {
+        let bytes = array.to_vec();
+        Ok(Self(Arc::new(Mutex::new(serde_json::from_slice(&bytes)?))))
+    }
+
+    fn guard(&self) -> MutexGuard<StoreMap> {
         self.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    pub fn size(&self) -> usize {
+        let mut sum = 0;
+        for (k, v) in &self.guard().map {
+            sum += k.len();
+            sum += v.len();
+        }
+        sum
+    }
+
+    pub fn to_json(&self) -> Result<Uint8Array> {
+        let json = serde_json::to_vec(&*self.guard())?;
+        let value = Uint8Array::new_with_length(json.len() as u32);
+        value.copy_from(&json);
+        Ok(value)
     }
 
     pub fn to_value(&self) -> Result<JsValue> {
@@ -53,23 +84,23 @@ impl Store {
     }
 
     pub fn set(&self, key: &[u8], value: &[u8]) {
-        self.guard().insert(key.to_vec(), value.to_vec());
+        self.guard().map.insert(key.to_vec(), value.to_vec());
     }
 
     pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        self.guard().get(key).cloned()
+        self.guard().map.get(key).cloned()
     }
 
     pub fn remove(&self, key: &[u8]) {
-        self.guard().remove(key);
+        self.guard().map.remove(key);
     }
 
     pub fn remove_subtree(&self, prefix: &[u8]) {
-        self.guard().retain(|key, _| !key.starts_with(prefix));
+        self.guard().map.retain(|key, _| !key.starts_with(prefix));
     }
 
     pub fn has_key(&self, key: &[u8]) -> bool {
-        self.guard().contains_key(key)
+        self.guard().map.contains_key(key)
     }
 }
 
