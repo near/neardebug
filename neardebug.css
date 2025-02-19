@@ -50,6 +50,28 @@ input, textarea, select {
     font-family: monospace;
 }
 
+.near_input, .gas_input {
+    display: flex;
+}
+
+.near_input span, .gas_input span {
+    white-space: nowrap;
+    margin-left: 1ex;
+    min-width: 10ex;
+}
+
+.near_input input, .gas_input input {
+    flex-grow: 1;
+}
+
+.near_input:after {
+    content: "Ⓝ";
+}
+
+.gas_input:after {
+    content: "Tgas";
+}
+
 /* Colors */
 html {
     background: #fff;

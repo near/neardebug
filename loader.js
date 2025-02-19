@@ -175,6 +175,49 @@ import init, { list_methods, prepare_contract, Logic, Context, Store, init_panic
         button.disabled = false;
     }
 
+    async function block_timestamp_update() {
+        const update_timestamp_placeholder = () => {
+            const nanos = BigInt(~~(Date.now() / 1000)) * 1000n * 1000n * 1000n;
+            document.querySelector("#block_timestamp").placeholder = nanos;
+        };
+        update_timestamp_placeholder();
+        setInterval(update_timestamp_placeholder, 1000);
+    }
+
+    async function near_input_update() {
+        for (const el of document.querySelectorAll(".near_input")) {
+            const input = el.querySelector("input");
+            const span = el.querySelector("span");
+            const update = () => {
+                span.innerText = "";
+                const value = (Number(input.value || input.placeholder) / 1E24);
+                const formatted = value.toLocaleString(undefined, {
+                    maximumFractionDigits: 3,
+                    minimumFractionDigits: 1,
+                    maximumSignificantDigits: 4,
+                    notation: "engineering"
+                });
+                span.innerText = `≈ ${formatted}`;
+            };
+            update();
+            input.addEventListener("input", update);
+        }
+    }
+
+    async function gas_input_update() {
+        for (const el of document.querySelectorAll(".gas_input")) {
+            const input = el.querySelector("input");
+            const span = el.querySelector("span");
+            const update = () => {
+                span.innerText = "";
+                const value = Number(input.value || input.placeholder) / 1000000000000;
+                span.innerText = `≈ ${value}`;
+            };
+            update();
+            input.addEventListener("input", update);
+        }
+    }
+
     async function on_load() {
         await init();
         init_panic_hook();
@@ -194,13 +237,9 @@ import init, { list_methods, prepare_contract, Logic, Context, Store, init_panic
             on_contract_change(e.target);
         });
         on_contract_change(file_input);
-
-        const update_timestamp_placeholder = () => {
-            const nanos = BigInt(~~(Date.now() / 1000)) * 1000n * 1000n * 1000n;
-            document.querySelector("#block_timestamp").placeholder = nanos;
-        };
-        update_timestamp_placeholder();
-        setInterval(update_timestamp_placeholder, 1000);
+        block_timestamp_update();
+        near_input_update();
+        gas_input_update();
     }
 
     (window.addEventListener || window.attachEvent)('load', on_load);
