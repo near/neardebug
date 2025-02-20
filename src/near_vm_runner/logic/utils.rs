@@ -9,7 +9,13 @@ pub(super) fn split_method_names(method_names: &[u8]) -> Result<Vec<Vec<u8>>, Ho
     } else {
         method_names
             .split(|c| *c == b',')
-            .map(|v| if v.is_empty() { Err(HostError::EmptyMethodName) } else { Ok(v.to_vec()) })
+            .map(|v| {
+                if v.is_empty() {
+                    Err(HostError::EmptyMethodName)
+                } else {
+                    Ok(v.to_vec())
+                }
+            })
             .collect()
     }
 }
@@ -38,17 +44,26 @@ mod tests {
 
     #[test]
     fn test_split_empty_method_name_inside() {
-        assert_eq!(split_method_names(b"hello,,world"), Err(HostError::EmptyMethodName));
+        assert_eq!(
+            split_method_names(b"hello,,world"),
+            Err(HostError::EmptyMethodName)
+        );
     }
 
     #[test]
     fn test_split_empty_method_name_front() {
-        assert_eq!(split_method_names(b",world"), Err(HostError::EmptyMethodName));
+        assert_eq!(
+            split_method_names(b",world"),
+            Err(HostError::EmptyMethodName)
+        );
     }
 
     #[test]
     fn test_split_empty_method_name_back() {
-        assert_eq!(split_method_names(b"world,"), Err(HostError::EmptyMethodName));
+        assert_eq!(
+            split_method_names(b"world,"),
+            Err(HostError::EmptyMethodName)
+        );
     }
 
     #[test]

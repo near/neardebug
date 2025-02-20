@@ -346,7 +346,10 @@ impl std::fmt::Display for HostError {
             BadUTF16 => write!(f, "String encoding is bad UTF-16 sequence."),
             GasExceeded => write!(f, "Exceeded the prepaid gas."),
             GasLimitExceeded => {
-                write!(f, "Exceeded the maximum amount of gas allowed to burn per contract.")
+                write!(
+                    f,
+                    "Exceeded the maximum amount of gas allowed to burn per contract."
+                )
             }
             BalanceExceeded => write!(f, "Exceeded the account balance."),
             EmptyMethodName => write!(f, "Tried to call an empty method name."),
@@ -356,7 +359,11 @@ impl std::fmt::Display for HostError {
                 write!(f, "Iterator index {:?} does not exist", iterator_index)
             }
             InvalidPromiseIndex { promise_idx } => {
-                write!(f, "{:?} does not correspond to existing promises", promise_idx)
+                write!(
+                    f,
+                    "{:?} does not correspond to existing promises",
+                    promise_idx
+                )
             }
             CannotAppendActionToJointPromise => {
                 write!(f, "Actions can only be appended to non-joint promise.")
@@ -372,7 +379,11 @@ impl std::fmt::Display for HostError {
             }
             MemoryAccessViolation => write!(f, "Accessed memory outside the bounds."),
             InvalidReceiptIndex { receipt_index } => {
-                write!(f, "VM Logic returned an invalid receipt index: {:?}", receipt_index)
+                write!(
+                    f,
+                    "VM Logic returned an invalid receipt index: {:?}",
+                    receipt_index
+                )
             }
             InvalidAccountId => write!(f, "VM Logic returned an invalid account id"),
             InvalidMethodName => write!(f, "VM Logic returned an invalid method name"),
@@ -384,20 +395,38 @@ impl std::fmt::Display for HostError {
                 write!(f, "The number of logs will exceed the limit {}", limit)
             }
             KeyLengthExceeded { length, limit } => {
-                write!(f, "The length of a storage key {} exceeds the limit {}", length, limit)
+                write!(
+                    f,
+                    "The length of a storage key {} exceeds the limit {}",
+                    length, limit
+                )
             }
             ValueLengthExceeded { length, limit } => {
-                write!(f, "The length of a storage value {} exceeds the limit {}", length, limit)
+                write!(
+                    f,
+                    "The length of a storage value {} exceeds the limit {}",
+                    length, limit
+                )
             }
             TotalLogLengthExceeded { length, limit } => {
-                write!(f, "The length of a log message {} exceeds the limit {}", length, limit)
+                write!(
+                    f,
+                    "The length of a log message {} exceeds the limit {}",
+                    length, limit
+                )
             }
-            NumberPromisesExceeded { number_of_promises, limit } => write!(
+            NumberPromisesExceeded {
+                number_of_promises,
+                limit,
+            } => write!(
                 f,
                 "The number of promises within a FunctionCall {} exceeds the limit {}",
                 number_of_promises, limit
             ),
-            NumberInputDataDependenciesExceeded { number_of_input_data_dependencies, limit } => {
+            NumberInputDataDependenciesExceeded {
+                number_of_input_data_dependencies,
+                limit,
+            } => {
                 write!(
                     f,
                     "The number of input data dependencies {} exceeds the limit {}",
@@ -405,7 +434,11 @@ impl std::fmt::Display for HostError {
                 )
             }
             ReturnedValueLengthExceeded { length, limit } => {
-                write!(f, "The length of a returned value {} exceeds the limit {}", length, limit)
+                write!(
+                    f,
+                    "The length of a returned value {} exceeds the limit {}",
+                    length, limit
+                )
             }
             ContractSizeExceeded { size, limit } => write!(
                 f,
@@ -413,7 +446,11 @@ impl std::fmt::Display for HostError {
                 size, limit
             ),
             Deprecated { method_name } => {
-                write!(f, "Attempted to call deprecated host function {}", method_name)
+                write!(
+                    f,
+                    "Attempted to call deprecated host function {}",
+                    method_name
+                )
             }
             AltBn128InvalidInput { msg } => write!(f, "AltBn128 invalid input: {}", msg),
             ECRecoverError { msg } => write!(f, "ECDSA recover error: {}", msg),

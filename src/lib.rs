@@ -1,9 +1,9 @@
 mod near_vm_runner;
 mod prepare;
 
-use wasm_bindgen::prelude::*;
 use finite_wasm::wasmparser::{self, Type};
-pub use near_vm_runner::{Logic, Context};
+pub use near_vm_runner::{Context, Logic};
+use wasm_bindgen::prelude::*;
 
 #[no_mangle]
 pub fn rustsecp256k1_v0_8_1_context_preallocated_size() {
@@ -41,7 +41,6 @@ pub fn list_methods(wasm_bytes: &[u8]) -> Result<Vec<String>, JsError> {
                         _ => {}
                     }
                 }
-
             }
             wasmparser::Payload::TypeSection(type_section) => {
                 for ty in type_section {
@@ -63,9 +62,7 @@ pub fn list_methods(wasm_bytes: &[u8]) -> Result<Vec<String>, JsError> {
                         continue;
                     };
                     let f = fns.get(ex.index as usize).copied();
-                    let Some(Type::Func(ty)) = f.and_then(|ty| {
-                        types.get(ty as usize)
-                    }) else {
+                    let Some(Type::Func(ty)) = f.and_then(|ty| types.get(ty as usize)) else {
                         return Err(JsError::new("could not obtain function type for export"));
                     };
                     if ty.params().is_empty() && ty.results().is_empty() {

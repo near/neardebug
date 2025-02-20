@@ -65,9 +65,10 @@ pub(super) fn g1_sum(
             .collect::<Result<Vec<_>, InvalidInput>>()?
     };
 
-    let res = elements
-        .iter()
-        .fold(bn::G1::zero(), |acc, &(sign, x)| if sign { acc - x } else { acc + x });
+    let res = elements.iter().fold(
+        bn::G1::zero(),
+        |acc, &(sign, x)| if sign { acc - x } else { acc + x },
+    );
 
     Ok(encode_g1(res))
 }

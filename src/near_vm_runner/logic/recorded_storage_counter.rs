@@ -12,7 +12,11 @@ pub struct RecordedStorageCounter {
 
 impl RecordedStorageCounter {
     pub fn new(initial_storage_size: usize, size_limit: usize) -> Self {
-        Self { initial_storage_size, last_observed_storage_size: initial_storage_size, size_limit }
+        Self {
+            initial_storage_size,
+            last_observed_storage_size: initial_storage_size,
+            size_limit,
+        }
     }
 
     /// Update the latest observed storage proof size and check if it exceeds the limit.
@@ -25,9 +29,11 @@ impl RecordedStorageCounter {
             let limit_u64 = self.size_limit.try_into().map_err(|_| {
                 VMLogicError::InconsistentStateError(InconsistentStateError::IntegerOverflow)
             })?;
-            return Err(VMLogicError::HostError(HostError::RecordedStorageExceeded {
-                limit: ByteSize::b(limit_u64),
-            }));
+            return Err(VMLogicError::HostError(
+                HostError::RecordedStorageExceeded {
+                    limit: ByteSize::b(limit_u64),
+                },
+            ));
         }
 
         Ok(())
@@ -37,6 +43,8 @@ impl RecordedStorageCounter {
     pub fn get_storage_size(&self) -> Result<usize, VMLogicError> {
         self.last_observed_storage_size
             .checked_sub(self.initial_storage_size)
-            .ok_or(VMLogicError::InconsistentStateError(InconsistentStateError::IntegerOverflow))
+            .ok_or(VMLogicError::InconsistentStateError(
+                InconsistentStateError::IntegerOverflow,
+            ))
     }
 }

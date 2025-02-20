@@ -64,12 +64,16 @@ impl Memory {
     ) -> Result<Cow<'s, [u8]>> {
         gas_counter.pay_base(read_memory_base)?;
         gas_counter.pay_per(read_memory_byte, slice.len)?;
-        self.0.view_memory(slice).map_err(|_| HostError::MemoryAccessViolation.into())
+        self.0
+            .view_memory(slice)
+            .map_err(|_| HostError::MemoryAccessViolation.into())
     }
 
     /// Like [`Self::view`] but does not pay gas fees.
     pub(crate) fn view_for_free(&self, slice: MemSlice) -> Result<Cow<[u8]>> {
-        self.0.view_memory(slice).map_err(|_| HostError::MemoryAccessViolation.into())
+        self.0
+            .view_memory(slice)
+            .map_err(|_| HostError::MemoryAccessViolation.into())
     }
 
     /// Copies data from guest memory into provided buffer accounting for gas.
@@ -77,7 +81,9 @@ impl Memory {
         gas_counter.pay_base(read_memory_base)?;
         let len = u64::try_from(buf.len()).map_err(|_| HostError::MemoryAccessViolation)?;
         gas_counter.pay_per(read_memory_byte, len)?;
-        self.0.read_memory(offset, buf).map_err(|_| HostError::MemoryAccessViolation.into())
+        self.0
+            .read_memory(offset, buf)
+            .map_err(|_| HostError::MemoryAccessViolation.into())
     }
 
     /// Copies data from provided buffer into guest memory accounting for gas.
@@ -89,7 +95,9 @@ impl Memory {
     ) -> Result<()> {
         gas_counter.pay_base(write_memory_base)?;
         gas_counter.pay_per(write_memory_byte, buf.len() as _)?;
-        self.0.write_memory(offset, buf).map_err(|_| HostError::MemoryAccessViolation.into())
+        self.0
+            .write_memory(offset, buf)
+            .map_err(|_| HostError::MemoryAccessViolation.into())
     }
 
     memory_get!(u128, get_u128);
@@ -146,7 +154,9 @@ impl Registers {
 
     /// Returns length of register with given index or None if no such register.
     pub(super) fn get_len(&self, register_id: u64) -> Option<u64> {
-        self.registers.get(&register_id).map(|data| data.len() as u64)
+        self.registers
+            .get(&register_id)
+            .map(|data| data.len() as u64)
     }
 
     /// Sets register with given index.
