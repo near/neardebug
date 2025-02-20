@@ -1,4 +1,3 @@
-use borsh::{BorshDeserialize, BorshSerialize};
 use bytesize::ByteSize;
 use std::fmt::{self, Error, Formatter};
 
@@ -36,7 +35,7 @@ pub enum MethodResolveError {
     MethodEmptyName,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, BorshDeserialize, BorshSerialize, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub enum CompilationError {
     CodeDoesNotExist {
         account_id: Box<str>,
@@ -56,7 +55,7 @@ pub enum CompilationError {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, BorshDeserialize, BorshSerialize, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 /// Error that can occur while preparing or executing Wasm smart-contract.
 pub enum PrepareError {
     /// Error happened while serializing the module.
