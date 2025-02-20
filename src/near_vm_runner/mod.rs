@@ -2,19 +2,9 @@ pub mod errors;
 pub mod logic;
 pub mod profile;
 
-use std::collections::BTreeMap;
-use std::str::FromStr as _;
-use std::sync::{Arc, Mutex, MutexGuard};
-
 use js_sys::{ArrayBuffer, Uint8Array};
 use logic::types::PromiseIndex;
-pub use logic::with_ext_cost_counter;
-use logic::{
-    gas_counter, ExecutionResultState, External, GasCounter, MemSlice, VMContext, VMLogicError,
-    ValuePtr,
-};
-use near_parameters::vm::Config;
-pub use near_primitives_core::code::ContractCode;
+use logic::{ExecutionResultState, External, VMContext, VMLogicError, ValuePtr};
 use near_primitives_core::hash::CryptoHash;
 use near_primitives_core::types::{
     AccountId, Balance, BlockHeight, EpochHeight, Gas, ProtocolVersion, StorageUsage,
@@ -23,7 +13,10 @@ use near_primitives_core::version::ProtocolFeature;
 pub use profile::ProfileDataV3;
 use serde::Serialize as _;
 use serde_with::serde_as;
+use std::collections::BTreeMap;
 use std::result::Result as SResult;
+use std::str::FromStr as _;
+use std::sync::{Arc, Mutex, MutexGuard};
 use wasm_bindgen::prelude::*;
 
 fn js_serializer() -> serde_wasm_bindgen::Serializer {
@@ -104,6 +97,14 @@ impl Store {
 
 struct Receipt {
     receiver: AccountId,
+    is_promise_yield: bool,
+}
+
+struct DataReceipt {
+    #[allow(dead_code)]
+    data_id: CryptoHash,
+    #[allow(dead_code)]
+    data: Vec<u8>,
 }
 
 #[wasm_bindgen]
@@ -117,6 +118,8 @@ pub struct DebugExternal {
     data_count: u64,
     validators: BTreeMap<AccountId, Balance>,
     receipts: Vec<Receipt>,
+    promise_yield_receipt_index: BTreeMap<CryptoHash, usize>,
+    data_receipts: Vec<DataReceipt>,
 }
 
 #[wasm_bindgen]
@@ -133,6 +136,8 @@ impl DebugExternal {
             validators: Default::default(),
             protocol_version,
             receipts: Vec::new(),
+            data_receipts: Vec::new(),
+            promise_yield_receipt_index: Default::default(),
         }
     }
 
@@ -264,6 +269,7 @@ impl External for DebugExternal {
         let index = self.receipts.len();
         self.receipts.push(Receipt {
             receiver: receiver_id,
+            is_promise_yield: false,
         });
         Ok(index as u64)
     }
@@ -276,7 +282,9 @@ impl External for DebugExternal {
         let data_id = self.generate_data_id();
         self.receipts.push(Receipt {
             receiver: receiver_id,
+            is_promise_yield: true,
         });
+        self.promise_yield_receipt_index.insert(data_id, index);
         Ok((index as u64, data_id))
     }
 
@@ -285,7 +293,15 @@ impl External for DebugExternal {
         data_id: CryptoHash,
         data: Vec<u8>,
     ) -> SResult<bool, logic::VMLogicError> {
-        todo!()
+        if let Some(idx) = self.promise_yield_receipt_index.remove(&data_id) {
+            let receipt = &mut self.receipts[idx];
+            assert!(receipt.is_promise_yield, "receipt should be promise yield");
+            receipt.is_promise_yield = false;
+            self.data_receipts.push(DataReceipt { data_id, data });
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 
     fn append_action_create_account(
