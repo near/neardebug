@@ -565,6 +565,10 @@ impl Logic {
             .map_err(|e| JsError::new(&e.to_string()))
     }
 
+    pub fn process_gas_limit(&mut self) -> JsError {
+        JsError::new(&self.logic.process_gas_limit().to_string())
+    }
+
     pub fn finite_wasm_gas(&mut self, gas: u64) -> Result<()> {
         self.logic.finite_wasm_gas(gas).map_err(Into::into)
     }

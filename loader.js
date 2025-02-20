@@ -141,9 +141,23 @@ import init, { list_methods, prepare_contract, Logic, Context, Store, init_panic
         // nearcore would apply these fees before compiling code, but in the debugger we don't yet
         // know the method name to use at that point.
         logic.fees_before_loading_executable(method_name, BigInt(window.contract.wasm.length));
-        window.contract.instance = await WebAssembly.instantiate(window.contract.module, import_object);
+        try {
+            window.contract.instance = await WebAssembly.instantiate(window.contract.module, import_object);
+        } catch (e) {
+            if (e.message == "HostError(GasExceeded)") {
+                e.message = logic.process_gas_limit().message;
+            }
+            throw e;
+        }
         logic.fees_after_loading_executable(BigInt(window.contract.wasm.length));
-        window.contract.instance.exports[method_name]();
+        try {
+            window.contract.instance.exports[method_name]();
+        } catch (e) {
+            if (e.message == "HostError(GasExceeded)") {
+                e.message = logic.process_gas_limit().message;
+            }
+            throw e;
+        }
     }
 
     async function load(contract_data) {
