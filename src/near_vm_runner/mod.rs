@@ -499,17 +499,7 @@ impl Logic {
     pub fn new(context: Context, memory: js_sys::WebAssembly::Memory, ext: DebugExternal) -> Self {
         let config_store = near_parameters::RuntimeConfigStore::new(None);
         let config = config_store.get_config(near_primitives_core::version::PROTOCOL_VERSION);
-        let max_gas_burnt = match context.0.view_config {
-            Some(ref v) => v.max_gas_burnt,
-            None => config.wasm_config.limit_config.max_gas_burnt,
-        };
-        let gas_counter = GasCounter::new(
-            config.wasm_config.ext_costs.clone(),
-            max_gas_burnt,
-            config.wasm_config.regular_op_cost,
-            context.0.prepaid_gas,
-            context.0.view_config.is_some(),
-        );
+        let gas_counter = context.0.make_gas_counter(&config.wasm_config);
         let result_state =
             ExecutionResultState::new(&context.0, gas_counter, config.wasm_config.clone());
         let ext = Box::new(ext);
@@ -789,7 +779,7 @@ impl Logic {
     }
 
     pub fn burn_gas(&mut self, gas: Gas) -> Result<()> {
-        self.logic.gas(gas).map_err(Into::into)
+        self.logic.burn_gas(gas).map_err(Into::into)
     }
 
     pub fn promise_create(

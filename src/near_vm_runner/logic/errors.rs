@@ -1,8 +1,6 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use bytesize::ByteSize;
-use std::any::Any;
 use std::fmt::{self, Error, Formatter};
-use std::io;
 
 /// For bugs in the runtime itself, crash and die is the usual response.
 ///
@@ -14,23 +12,6 @@ pub enum VMRunnerError {
     /// E.g. an integer overflow by using a value from the given context.
     #[error("{0}")]
     InconsistentStateError(InconsistentStateError),
-    /// Error caused by caching.
-    #[error("cache error: {0}")]
-    CacheError(#[from] CacheError),
-    /// Error (eg, resource exhausting) when loading a successfully compiled
-    /// contract into executable memory.
-    #[error("loading error: {0}")]
-    LoadingError(String),
-    /// Type erased error from `External` trait implementation.
-    #[error("external error")]
-    ExternalError(AnyError),
-    /// Non-deterministic error.
-    #[error("non-deterministic error during contract execution: {0}")]
-    Nondeterministic(String),
-    #[error("unknown error during contract execution: {debug_message}")]
-    WasmUnknownError { debug_message: String },
-    #[error("account has no associated contract code")]
-    ContractCodeNotPresent,
 }
 
 /// Permitted errors that cause a function call to fail gracefully.
@@ -45,57 +26,14 @@ pub enum VMRunnerError {
 pub enum FunctionCallError {
     /// Wasm compilation error
     CompilationError(CompilationError),
-    /// Wasm binary env link error
-    LinkError {
-        msg: String,
-    },
     /// Import/export resolve error
     MethodResolveError(MethodResolveError),
-    /// A trap happened during execution of a binary
-    WasmTrap(WasmTrap),
     HostError(HostError),
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum CacheError {
-    #[error("cache read error: {0}")]
-    ReadError(#[source] io::Error),
-    #[error("cache write error: {0}")]
-    WriteError(#[source] io::Error),
-    #[error("cache deserialization error")]
-    DeserializationError,
-    #[error("cache serialization error")]
-    SerializationError { hash: [u8; 32] },
-}
-
-/// A kind of a trap happened during execution of a binary
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
-pub enum WasmTrap {
-    /// An `unreachable` opcode was executed.
-    Unreachable,
-    /// Call indirect incorrect signature trap.
-    IncorrectCallIndirectSignature,
-    /// Memory out of bounds trap.
-    MemoryOutOfBounds,
-    /// Call indirect out of bounds trap.
-    CallIndirectOOB,
-    /// An arithmetic exception, e.g. divided by zero.
-    IllegalArithmetic,
-    /// Misaligned atomic access trap.
-    MisalignedAtomicAccess,
-    /// Indirect call to null.
-    IndirectCallToNull,
-    /// Stack overflow.
-    StackOverflow,
-    /// Generic trap.
-    GenericTrap,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub enum MethodResolveError {
     MethodEmptyName,
-    MethodNotFound,
-    MethodInvalidSignature,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, BorshDeserialize, BorshSerialize, serde::Serialize)]
@@ -282,8 +220,6 @@ pub enum HostError {
 pub enum VMLogicError {
     /// Errors coming from native Wasm VM.
     HostError(HostError),
-    /// Type erased error from `External` trait implementation.
-    ExternalError(AnyError),
     /// An error that is caused by an operation on an inconsistent state.
     InconsistentStateError(InconsistentStateError),
 }
@@ -329,7 +265,6 @@ impl TryFrom<VMLogicError> for FunctionCallError {
     fn try_from(err: VMLogicError) -> Result<Self, Self::Error> {
         match err {
             VMLogicError::HostError(h) => Ok(FunctionCallError::HostError(h)),
-            VMLogicError::ExternalError(s) => Err(VMRunnerError::ExternalError(s)),
             VMLogicError::InconsistentStateError(e) => {
                 Err(VMRunnerError::InconsistentStateError(e))
             }
@@ -366,28 +301,6 @@ impl fmt::Display for FunctionCallError {
             FunctionCallError::CompilationError(e) => e.fmt(f),
             FunctionCallError::MethodResolveError(e) => e.fmt(f),
             FunctionCallError::HostError(e) => e.fmt(f),
-            FunctionCallError::LinkError { msg } => write!(f, "{}", msg),
-            FunctionCallError::WasmTrap(trap) => write!(f, "WebAssembly trap: {}", trap),
-        }
-    }
-}
-
-impl fmt::Display for WasmTrap {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        match self {
-            WasmTrap::Unreachable => write!(f, "An `unreachable` opcode was executed."),
-            WasmTrap::IncorrectCallIndirectSignature => {
-                write!(f, "Call indirect incorrect signature trap.")
-            }
-            WasmTrap::MemoryOutOfBounds => write!(f, "Memory out of bounds trap."),
-            WasmTrap::CallIndirectOOB => write!(f, "Call indirect out of bounds trap."),
-            WasmTrap::IllegalArithmetic => {
-                write!(f, "An arithmetic exception, e.g. divided by zero.")
-            }
-            WasmTrap::MisalignedAtomicAccess => write!(f, "Misaligned atomic access trap."),
-            WasmTrap::GenericTrap => write!(f, "Generic trap."),
-            WasmTrap::StackOverflow => write!(f, "Stack overflow."),
-            WasmTrap::IndirectCallToNull => write!(f, "Indirect call to null."),
         }
     }
 }
@@ -520,65 +433,5 @@ impl std::fmt::Display for HostError {
                 limit
             ),
         }
-    }
-}
-
-/// Type-erased error used to shuttle some concrete error coming from `External`
-/// through vm-logic.
-///
-/// The caller is supposed to downcast this to a concrete error type they should
-/// know. This would be just `Box<dyn Any + Eq>` if the latter actually worked.
-pub struct AnyError {
-    any: Box<dyn AnyEq>,
-}
-
-#[derive(Debug, thiserror::Error)]
-#[error("failed to downcast")]
-pub struct DowncastFailedError;
-
-impl AnyError {
-    pub fn new<E: Any + Eq + Send + Sync + 'static>(err: E) -> AnyError {
-        AnyError { any: Box::new(err) }
-    }
-    pub fn downcast<E: Any + Eq + Send + Sync + 'static>(self) -> Result<E, DowncastFailedError> {
-        match self.any.into_any().downcast::<E>() {
-            Ok(it) => Ok(*it),
-            Err(_) => Err(DowncastFailedError),
-        }
-    }
-}
-
-impl PartialEq for AnyError {
-    fn eq(&self, other: &Self) -> bool {
-        self.any.any_eq(&*other.any)
-    }
-}
-
-impl Eq for AnyError {}
-
-impl fmt::Debug for AnyError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(self.any.as_any(), f)
-    }
-}
-
-trait AnyEq: Any + Send + Sync {
-    fn any_eq(&self, rhs: &dyn AnyEq) -> bool;
-    fn as_any(&self) -> &dyn Any;
-    fn into_any(self: Box<Self>) -> Box<dyn Any>;
-}
-
-impl<T: Any + Eq + Sized + Send + Sync> AnyEq for T {
-    fn any_eq(&self, rhs: &dyn AnyEq) -> bool {
-        match rhs.as_any().downcast_ref::<Self>() {
-            Some(rhs) => self == rhs,
-            None => false,
-        }
-    }
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-    fn into_any(self: Box<Self>) -> Box<dyn Any> {
-        self
     }
 }
