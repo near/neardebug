@@ -137,11 +137,18 @@ import init, { list_methods, prepare_contract, Logic, Context, Store, init_panic
             sandbox_debug_log: (len, ptr) /* ->  [] */ => { console.log("TODO sandbox_debug_log"); },
             sleep_nanos: (duration) /* ->  [] */ => { console.log("TODO sleep_nanos"); },
         };
+        // NB: applying fees "before loading" does not 100% match the behaviour of nearcore --
+        // nearcore would apply these fees before compiling code, but in the debugger we don't yet
+        // know the method name to use at that point.
+        logic.fees_before_loading_executable(method_name, BigInt(window.contract.wasm.length));
         window.contract.instance = await WebAssembly.instantiate(window.contract.module, import_object);
+        logic.fees_after_loading_executable(BigInt(window.contract.wasm.length));
         window.contract.instance.exports[method_name]();
     }
 
     async function load(contract_data) {
+        delete contract.wasm;
+        delete contract.prepared_wasm;
         delete contract.instance;
         delete contract.memory;
         delete contract.logic;
@@ -149,9 +156,9 @@ import init, { list_methods, prepare_contract, Logic, Context, Store, init_panic
             delete contract.module;
             return;
         }
-        contract_data = new Uint8Array(contract_data);
-        const prepared_contract_data = prepare_contract(contract_data);
-        contract.module = await WebAssembly.compile(prepared_contract_data);
+        contract.wasm = new Uint8Array(contract_data);
+        contract.prepared_wasm = prepare_contract(contract.wasm);
+        contract.module = await WebAssembly.compile(contract.prepared_wasm);
     }
 
     async function on_contract_change(element) {

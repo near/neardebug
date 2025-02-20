@@ -7,13 +7,12 @@ use std::str::FromStr as _;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use js_sys::{ArrayBuffer, Uint8Array};
-use logic::mocks::mock_external::MockedValuePtr;
+use logic::types::PromiseIndex;
 pub use logic::with_ext_cost_counter;
 use logic::{
     gas_counter, ExecutionResultState, External, GasCounter, MemSlice, VMContext, VMLogicError,
     ValuePtr,
 };
-use logic::{mocks::mock_external, types::PromiseIndex};
 use near_parameters::vm::Config;
 pub use near_primitives_core::code::ContractCode;
 use near_primitives_core::hash::CryptoHash;
@@ -33,7 +32,6 @@ fn js_serializer() -> serde_wasm_bindgen::Serializer {
         .serialize_large_number_types_as_bigints(true)
         .serialize_bytes_as_arrays(false)
 }
-
 
 #[serde_as]
 #[derive(serde::Serialize, serde::Deserialize, Default)]
@@ -156,6 +154,31 @@ impl External for DebugExternal {
         key: &[u8],
         _: near_parameters::vm::StorageGetMode,
     ) -> SResult<Option<Box<dyn logic::ValuePtr + 'a>>, VMLogicError> {
+        pub struct MockedValuePtr {
+            value: Vec<u8>,
+        }
+
+        impl MockedValuePtr {
+            pub fn new<T>(value: T) -> Self
+            where
+                T: AsRef<[u8]>,
+            {
+                MockedValuePtr {
+                    value: value.as_ref().to_vec(),
+                }
+            }
+        }
+
+        impl ValuePtr for MockedValuePtr {
+            fn len(&self) -> u32 {
+                self.value.len() as u32
+            }
+
+            fn deref(&self) -> SResult<Vec<u8>, VMLogicError> {
+                Ok(self.value.clone())
+            }
+        }
+
         let v = self.store.get(key);
         Ok(v.map(|v| Box::new(MockedValuePtr::new(&v)) as Box<_>))
     }
@@ -520,6 +543,26 @@ impl Logic {
     pub fn registers(&mut self) -> Result<JsValue> {
         let s = js_serializer();
         self.logic.registers().serialize(&s).map_err(Into::into)
+    }
+
+    pub fn fees_before_loading_executable(
+        &mut self,
+        method_name: &str,
+        code_len: u64,
+    ) -> Result<()> {
+        let config = self.logic.config().clone();
+        self.logic
+            .gas_counter()
+            .before_loading_executable(&config, method_name, code_len)
+            .map_err(|e| JsError::new(&e.to_string()))
+    }
+
+    pub fn fees_after_loading_executable(&mut self, code_len: u64) -> Result<()> {
+        let config = self.logic.config().clone();
+        self.logic
+            .gas_counter()
+            .after_loading_executable(&config, code_len)
+            .map_err(|e| JsError::new(&e.to_string()))
     }
 
     pub fn finite_wasm_gas(&mut self, gas: u64) -> Result<()> {
