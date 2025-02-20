@@ -1,5 +1,5 @@
 mod alt_bn128;
-// mod bls12381;
+mod bls12381;
 mod context;
 mod dependencies;
 pub mod errors;

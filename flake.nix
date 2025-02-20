@@ -25,7 +25,11 @@
                 wasm-bindgen-cli
                 typescript-language-server
                 rustup
+                clang
             ];
+            shellHook = ''
+                export NIX_CFLAGS_LINK=
+            '';
         };
     });
 }
