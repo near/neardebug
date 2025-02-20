@@ -69,14 +69,6 @@ impl ProfileDataV3 {
             .saturating_sub(self.host_gas());
     }
 
-    pub fn get_action_cost(&self, action: ActionCosts) -> Gas {
-        self.actions_profile[action]
-    }
-
-    pub fn get_ext_cost(&self, ext: ExtCosts) -> Gas {
-        self.wasm_ext_profile[ext]
-    }
-
     pub fn get_wasm_cost(&self) -> Gas {
         self.wasm_gas
     }
