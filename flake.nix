@@ -18,12 +18,11 @@
             ''; in "${script}";
         };
         # Open a development shell (`nix develop`)
-        devShells.default = mkShell {
-            buildInputs = [
+        devShells.default = pkgsCross.wasi32.mkShell {
+            nativeBuildInputs = [
                 just
                 wasm-pack
                 wasm-bindgen-cli
-                gcc
                 typescript-language-server
                 rustup
             ];

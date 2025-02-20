@@ -746,28 +746,28 @@ impl Logic {
             .map_err(Into::into)
     }
 
-    // pub fn ecrecover(
-    //     &mut self,
-    //     hash_len: u64,
-    //     hash_ptr: u64,
-    //     sig_len: u64,
-    //     sig_ptr: u64,
-    //     v: u64,
-    //     malleability_flag: u64,
-    //     register_id: u64,
-    // ) -> Result<u64> {
-    //     self.logic
-    //         .ecrecover(
-    //             hash_len,
-    //             hash_ptr,
-    //             sig_len,
-    //             sig_ptr,
-    //             v,
-    //             malleability_flag,
-    //             register_id,
-    //         )
-    //         .map_err(Into::into)
-    // }
+    pub fn ecrecover(
+        &mut self,
+        hash_len: u64,
+        hash_ptr: u64,
+        sig_len: u64,
+        sig_ptr: u64,
+        v: u64,
+        malleability_flag: u64,
+        register_id: u64,
+    ) -> Result<u64> {
+        self.logic
+            .ecrecover(
+                hash_len,
+                hash_ptr,
+                sig_len,
+                sig_ptr,
+                v,
+                malleability_flag,
+                register_id,
+            )
+            .map_err(Into::into)
+    }
 
     pub fn ed25519_verify(
         &mut self,

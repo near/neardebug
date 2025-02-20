@@ -5,21 +5,6 @@ use finite_wasm::wasmparser::{self, Type};
 pub use near_vm_runner::{Context, Logic};
 use wasm_bindgen::prelude::*;
 
-#[no_mangle]
-pub fn rustsecp256k1_v0_8_1_context_preallocated_size() {
-    todo!("not supported")
-}
-
-#[no_mangle]
-pub fn rustsecp256k1_v0_8_1_context_preallocated_create() {
-    todo!("not supported")
-}
-
-#[no_mangle]
-pub fn rustsecp256k1_v0_8_1_context_preallocated_destroy() {
-    todo!("not supported")
-}
-
 #[wasm_bindgen]
 pub fn init_panic_hook() {
     console_error_panic_hook::set_once();
