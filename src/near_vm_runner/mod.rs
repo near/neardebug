@@ -718,6 +718,60 @@ impl Logic {
             .map_err(Into::into)
     }
 
+    pub fn bls12381_p1_sum(&mut self, len: u64, ptr: u64, register_id: u64) -> Result<u64> {
+        self.logic
+            .bls12381_p1_sum(len, ptr, register_id)
+            .map_err(Into::into)
+    }
+
+    pub fn bls12381_p2_sum(&mut self, len: u64, ptr: u64, register_id: u64) -> Result<u64> {
+        self.logic
+            .bls12381_p2_sum(len, ptr, register_id)
+            .map_err(Into::into)
+    }
+
+    pub fn bls12381_g1_multiexp(&mut self, len: u64, ptr: u64, register_id: u64) -> Result<u64> {
+        self.logic
+            .bls12381_g1_multiexp(len, ptr, register_id)
+            .map_err(Into::into)
+    }
+
+    pub fn bls12381_g2_multiexp(&mut self, len: u64, ptr: u64, register_id: u64) -> Result<u64> {
+        self.logic
+            .bls12381_g2_multiexp(len, ptr, register_id)
+            .map_err(Into::into)
+    }
+
+    pub fn bls12381_map_fp_to_g1(&mut self, len: u64, ptr: u64, register_id: u64) -> Result<u64> {
+        self.logic
+            .bls12381_map_fp_to_g1(len, ptr, register_id)
+            .map_err(Into::into)
+    }
+
+    pub fn bls12381_map_fp2_to_g2(&mut self, len: u64, ptr: u64, register_id: u64) -> Result<u64> {
+        self.logic
+            .bls12381_map_fp2_to_g2(len, ptr, register_id)
+            .map_err(Into::into)
+    }
+
+    pub fn bls12381_p1_decompress(&mut self, len: u64, ptr: u64, register_id: u64) -> Result<u64> {
+        self.logic
+            .bls12381_p1_decompress(len, ptr, register_id)
+            .map_err(Into::into)
+    }
+
+    pub fn bls12381_p2_decompress(&mut self, len: u64, ptr: u64, register_id: u64) -> Result<u64> {
+        self.logic
+            .bls12381_p2_decompress(len, ptr, register_id)
+            .map_err(Into::into)
+    }
+
+    pub fn bls12381_pairing_check(&mut self, len: u64, ptr: u64) -> Result<u64> {
+        self.logic
+            .bls12381_pairing_check(len, ptr)
+            .map_err(Into::into)
+    }
+
     pub fn random_seed(&mut self, register_id: u64) -> Result<()> {
         self.logic.random_seed(register_id).map_err(Into::into)
     }

@@ -125,17 +125,17 @@ import init, { list_methods, prepare_contract, Logic, Context, Store, init_panic
             alt_bn128_g1_multiexp: (...args) => logic.alt_bn128_g1_multiexp(...args),
             alt_bn128_g1_sum: (...args) => logic.alt_bn128_g1_sum(...args),
             alt_bn128_pairing_check: (...args) => logic.alt_bn128_pairing_check(...args),
-            bls12381_p1_sum: (value_len, value_ptr, register_id) /* ->  [u64] */ => { console.log("TODO bls12381_p1_sum"); },
-            bls12381_p2_sum: (value_len, value_ptr, register_id) /* ->  [u64] */ => { console.log("TODO bls12381_p2_sum"); },
-            bls12381_g1_multiexp: (value_len, value_ptr, register_id) /* ->  [u64] */ => { console.log("TODO bls12381_g1_multiexp"); },
-            bls12381_g2_multiexp: (value_len, value_ptr, register_id) /* ->  [u64] */ => { console.log("TODO bls12381_g2_multiexp"); },
-            bls12381_map_fp_to_g1: (value_len, value_ptr, register_id) /* ->  [u64] */ => { console.log("TODO bls12381_map_fp_to_g1"); },
-            bls12381_map_fp2_to_g2: (value_len, value_ptr, register_id) /* ->  [u64] */ => { console.log("TODO bls12381_map_fp2_to_g2"); },
-            bls12381_pairing_check: (value_len, value_ptr) /* ->  [u64] */ => { console.log("TODO bls12381_pairing_check"); },
-            bls12381_p1_decompress: (value_len, value_ptr, register_id) /* ->  [u64] */ => { console.log("TODO bls(12381_p1_decompress"); },
-            bls12381_p2_decompress: (value_len, value_ptr, register_id) /* ->  [u64] */ => { console.log("TODO bls12381_p2_decompress"); },
-            sandbox_debug_log: (len, ptr) /* ->  [] */ => { console.log("TODO sandbox_debug_log"); },
-            sleep_nanos: (duration) /* ->  [] */ => { console.log("TODO sleep_nanos"); },
+            bls12381_p1_sum: (...args) => logic.bls12381_p1_sum(...args),
+            bls12381_p2_sum: (...args) => logic.bls12381_p2_sum(...args),
+            bls12381_g1_multiexp: (...args) => logic.bls12381_g1_multiexp(...args),
+            bls12381_g2_multiexp: (...args) => logic.bls12381_g2_multiexp(...args),
+            bls12381_map_fp_to_g1: (...args) => logic.bls12381_map_fp_to_g1(...args),
+            bls12381_map_fp2_to_g2: (...args) => logic.bls12381_map_fp2_to_g2(...args),
+            bls12381_pairing_check: (...args) => logic.bls12381_pairing_check(...args),
+            bls12381_p1_decompress: (...args) => logic.bls12381_p1_decompress(...args),
+            bls12381_p2_decompress: (...args) => logic.bls12381_p2_decompress(...args),
+            sandbox_debug_log: () => console.warn("sandbox_debug_log is not a standard host function"),
+            sleep_nanos: () => console.warn("sleep_nanos is not a standard host function"),
         };
         // NB: applying fees "before loading" does not 100% match the behaviour of nearcore --
         // nearcore would apply these fees before compiling code, but in the debugger we don't yet
@@ -254,7 +254,7 @@ import init, { list_methods, prepare_contract, Logic, Context, Store, init_panic
     }
 
     async function act_download_store() {
-        var blob = new Blob([window.contract.store.to_json()], {type: "application/json"});
+        var blob = new Blob([window.contract.store.to_json()], { type: "application/json" });
         var link = document.createElement('a');
         link.href = window.URL.createObjectURL(blob);
         link.download = `neardebug_${new Date().valueOf()}.nearstore`;
